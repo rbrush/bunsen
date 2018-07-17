@@ -3,6 +3,7 @@ package com.cerner.bunsen
 import ca.uhn.fhir.context._
 import com.cerner.bunsen.datatypes.DataTypeMappings
 import org.apache.spark.sql.types.{BooleanType => _, DateType => _, IntegerType => _, StringType => _, _}
+import org.hl7.fhir.dstu3.model.StructureDefinition
 import org.hl7.fhir.instance.model.api.IBaseResource
 
 import scala.collection.JavaConversions._
@@ -21,9 +22,22 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
     */
   def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
 
-    val definition = fhirContext.getResourceDefinition(resourceClass)
+    val resourceDef = fhirContext.getResourceDefinition(resourceClass)
 
-    compositeToStructType(definition)
+    val support = fhirContext.getValidationSupport();
+
+    val structureDef = support.fetchStructureDefinition(fhirContext, resourceDef.getName())
+
+    compositeToStructType(resourceDef)
+  }
+
+  def resourceSchema(structureDef: StructureDefinition): StructType = {
+
+    null
+  }
+
+  def resourceSchema() : StructType = {
+    null
   }
 
   /**
@@ -98,4 +112,16 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
     StructType(fields)
   }
 
+  /**
+    * Returns the Spark struct type used to encode the given FHIR composite.
+    *
+    * @param definition The FHIR definition of a composite type.
+    * @return The schema as a Spark StructType
+    */
+  private [bunsen] def compositeToStructType(definition: StructureDefinition): StructType = {
+
+    val fields : Seq[StructField] = null
+
+    StructType(fields)
+  }
 }

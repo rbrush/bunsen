@@ -2,6 +2,9 @@ package com.cerner.bunsen.stu3;
 
 import ca.uhn.fhir.context.FhirContext;
 import com.cerner.bunsen.SchemaConverter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BooleanType;
@@ -14,6 +17,7 @@ import org.apache.spark.sql.types.TimestampType;
 import org.hl7.fhir.dstu3.model.Condition;
 import org.hl7.fhir.dstu3.model.MedicationRequest;
 import org.hl7.fhir.dstu3.model.Observation;
+import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -151,5 +155,35 @@ public class SchemaConverterTest {
         "medicationMedication").isEmpty());
     Assert.assertTrue(medRequestSchema.getFieldIndex(
         "medicationResource").isEmpty());
+  }
+
+
+  public void getExtensions(StructureDefinition definition) {
+
+    definition.getDifferential()
+        .getElement()
+        .stream().filter(elementDefinition -> {
+
+          return elementDefinition.getType().stream()
+              .anyMatch(type -> type.getCode().equals("Extension"));
+        }
+    );
+  }
+
+  @Test
+  public void testStructDef() throws IOException {
+
+    try (InputStream input = SchemaConverterTest.class.getClassLoader()
+        .getResourceAsStream("json/StructureDefinition-us-core-patient.json")) {
+
+      StructureDefinition struct = (StructureDefinition)
+          FhirContext.forDstu3().newJsonParser().parseResource(new InputStreamReader(input));
+
+
+
+
+      System.out.println(struct.getUrl());
+
+    }
   }
 }
