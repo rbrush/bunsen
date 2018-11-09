@@ -37,8 +37,11 @@
 
   <modules>
     <module>bunsen-core</module>
+    <module>bunsen-core-stu3</module>
+    <module>bunsen-uscore-resources-stu3</module>
+    <module>bunsen-spark-stu3</module>
     <module>bunsen-stu3</module>
-    <module>bunsen-r4</module>
+  <!--  <module>bunsen-r4</module> -->
     <module>bunsen-shaded</module>
     <module>python</module>
     <module>assembly</module>
@@ -149,12 +152,13 @@
         </executions>
       </plugin>
 
+      <!-- TODO: re-add
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <executions>
           <execution>
-            <!-- First run the checkstyle goal without output errors to console -->
+
             <id>verify_checkstyleReport</id>
             <phase>verify</phase>
             <goals>
@@ -171,7 +175,7 @@
             </configuration>
           </execution>
           <execution>
-            <!-- Next run the check goal and output errors to console -->
+
             <id>verify_checkstyleCheck</id>
             <goals>
               <goal>check</goal>
@@ -188,6 +192,7 @@
           </execution>
         </executions>
       </plugin>
+-->
 
     </plugins>
 
@@ -480,6 +485,24 @@
       <dependency>
         <groupId>com.cerner.bunsen</groupId>
         <artifactId>bunsen-stu3</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.cerner.bunsen</groupId>
+        <artifactId>bunsen-core-stu3</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.cerner.bunsen</groupId>
+        <artifactId>bunsen-spark-stu3</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.cerner.bunsen</groupId>
+        <artifactId>bunsen-uscore-resources-stu3</artifactId>
         <version>${project.version}</version>
       </dependency>
 
