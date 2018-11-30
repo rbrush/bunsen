@@ -6,7 +6,7 @@
   <parent>
     <artifactId>bunsen-parent</artifactId>
     <groupId>com.cerner.bunsen</groupId>
-    <version>0.4.4-SNAPSHOT</version>
+    <version>0.5.0-alpha1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <name>Bunsen Shaded Assembly</name>
@@ -35,8 +35,6 @@
                   <include>com.cerner.bunsen:bunsen-core</include>
                   <include>com.cerner.bunsen:bunsen-stu3</include>
 
-                 <!-- <include>com.cerner.bunsen:bunsen-r4</include> -->
-
                   <!-- Include the FHIR base APIS -->
                   <include>ca.uhn.hapi.fhir:hapi-fhir-base</include>
                   <include>ca.uhn.hapi.fhir:hapi-fhir-utilities</include>
@@ -45,10 +43,6 @@
                   <include>ca.uhn.hapi.fhir:hapi-fhir-structures-dstu3</include>
                   <include>ca.uhn.hapi.fhir:hapi-fhir-validation-resources-dstu3</include>
 
-                  <!-- Include R4 FHIR Support
-                  <include>ca.uhn.hapi.fhir:hapi-fhir-structures-r4</include>
-                  <include>ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4</include>
-                     -->
 
                 </includes>
               </artifactSet>
@@ -81,10 +75,6 @@
     <dependency>
       <groupId>com.cerner.bunsen</groupId>
       <artifactId>bunsen-stu3</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.cerner.bunsen</groupId>
-      <artifactId>bunsen-r4</artifactId>
     </dependency>
   </dependencies>
 </project>

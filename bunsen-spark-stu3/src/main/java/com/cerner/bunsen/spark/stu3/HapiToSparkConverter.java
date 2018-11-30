@@ -3,15 +3,14 @@ package com.cerner.bunsen.spark.stu3;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
-import org.hl7.fhir.dstu3.model.Base;
+import org.hl7.fhir.instance.model.api.IBase;
 
-public abstract class HapiToSparkConverter {
+abstract class HapiToSparkConverter {
 
   public interface HapiFieldSetter {
 
-    public void setField(Base parentObject,
+    public void setField(IBase parentObject,
         BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject);
   }

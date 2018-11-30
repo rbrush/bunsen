@@ -1,7 +1,6 @@
 package com.cerner.bunsen.spark.stu3;
 
 import ca.uhn.fhir.context.FhirContext;
-import com.cerner.bunsen.definitions.StructureDefinitions;
 import com.cerner.bunsen.stu3.UsCoreStructures;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -28,10 +27,7 @@ import org.hl7.fhir.dstu3.model.Patient;
 import org.hl7.fhir.dstu3.model.Quantity;
 import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.StringType;
-import org.hl7.fhir.dstu3.model.StructureDefinition;
-import org.hl7.fhir.dstu3.model.Type;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.instance.model.api.IPrimitiveType;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.junit.AfterClass;
@@ -62,11 +58,6 @@ public class SparkRowConverterTest {
   }
 
   static FhirContext fhirContext;
-
-
-  static DefinitionToSparkVisitor visitor;
-
-  static StructureDefinitions structureDefinitions;
 
   private static final String US_CORE_PATIENT =
       "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";
@@ -123,7 +114,6 @@ public class SparkRowConverterTest {
 
     testObservationDecoded =
         (Observation) observationConverter.rowToResource(testObservationDataset.head());
-
 
     SparkRowConverter conditionConverter = SparkRowConverter.forResource(fhirContext,
         US_CORE_CONDITION);

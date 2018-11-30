@@ -2,11 +2,9 @@ package com.cerner.bunsen.spark.stu3;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import com.cerner.bunsen.definitions.StructureDefinitions;
-import com.cerner.bunsen.spark.stu3.HapiToSparkConverter.HapiFieldSetter;
+import com.cerner.bunsen.definitions.stu3.Stu3StructureDefinitions;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 
@@ -19,12 +17,15 @@ public class SparkRowConverter {
 
   private final RowToHapiConverter sparkToHapiConverter;
 
-  SparkRowConverter(FhirContext context,
-      StructureDefinitions structureDefinitions,
-      StructureDefinition definition) {
+  private final DefinitionToSparkVisitor visitor;
 
-    this.hapiToSparkConverter =
-        (HapiToSparkConverter) structureDefinitions.transform(definition);
+  SparkRowConverter(FhirContext context,
+      Stu3StructureDefinitions structureDefinitions,
+      String resourceTypeUrl) {
+
+    this.visitor = new DefinitionToSparkVisitor(structureDefinitions.conversionSupport());
+
+    this.hapiToSparkConverter = structureDefinitions.transform(visitor, resourceTypeUrl);
 
     RuntimeResourceDefinition resourceDefinition =
         context.getResourceDefinition(hapiToSparkConverter.getElementType());
@@ -36,19 +37,9 @@ public class SparkRowConverter {
   public static SparkRowConverter forResource(FhirContext context,
       String resourceTypeUrl) {
 
-    StructureDefinition definition = (StructureDefinition) context.getValidationSupport()
-        .fetchStructureDefinition(context, resourceTypeUrl);
+    Stu3StructureDefinitions structureDefinitions = new Stu3StructureDefinitions(context);
 
-    return forResource(context, definition);
-  }
-
-  public static SparkRowConverter forResource(FhirContext context,
-      StructureDefinition definition) {
-
-    DefinitionToSparkVisitor visitor = new DefinitionToSparkVisitor();
-    StructureDefinitions structureDefinitions = new StructureDefinitions(visitor, context);
-
-    return new SparkRowConverter(context, structureDefinitions, definition);
+    return new SparkRowConverter(context, structureDefinitions, resourceTypeUrl);
   }
 
   public Row resourceToRow(IBaseResource resource) {

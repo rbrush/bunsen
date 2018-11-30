@@ -2,7 +2,6 @@ package com.cerner.bunsen.definitions;
 
 import java.util.List;
 import java.util.Map;
-import org.hl7.fhir.dstu3.model.ElementDefinition;
 
 /**
  * Visitor for each field in a FHIR StructureDefinition
@@ -16,7 +15,6 @@ public interface DefinitionVisitor<T> {
 
   public T visitComposite(String elementName,
       String elementType,
-      ElementDefinition definition,
       List<StructureField<T>> children);
 
   public T visitReference(String elementName,

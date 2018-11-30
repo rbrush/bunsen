@@ -5,7 +5,7 @@
   <groupId>com.cerner.bunsen</groupId>
   <artifactId>bunsen-parent</artifactId>
   <packaging>pom</packaging>
-  <version>0.4.4-SNAPSHOT</version>
+  <version>0.5.0-alpha1-SNAPSHOT</version>
   <name>Bunsen Parent</name>
   <description>Use FHIR resources as native Spark data sets</description>
   <url>http://engineering.cerner.com/bunsen</url>
@@ -39,6 +39,7 @@
     <module>bunsen-core</module>
     <module>bunsen-core-stu3</module>
     <module>bunsen-uscore-resources-stu3</module>
+    <module>bunsen-spark</module>
     <module>bunsen-spark-stu3</module>
     <module>bunsen-stu3</module>
   <!--  <module>bunsen-r4</module> -->
@@ -491,6 +492,12 @@
       <dependency>
         <groupId>com.cerner.bunsen</groupId>
         <artifactId>bunsen-core-stu3</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.cerner.bunsen</groupId>
+        <artifactId>bunsen-spark</artifactId>
         <version>${project.version}</version>
       </dependency>
 

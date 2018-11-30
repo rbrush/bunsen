@@ -1,17 +1,12 @@
 package com.cerner.bunsen.spark.stu3;
 
-import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import com.cerner.bunsen.definitions.StructureDefinitions;
-import com.cerner.bunsen.spark.stu3.HapiToSparkConverter.HapiFieldSetter;
 import com.cerner.bunsen.stu3.UsCoreStructures;
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.dstu3.model.Address;
 import org.hl7.fhir.dstu3.model.CodeType;
@@ -28,7 +23,6 @@ import org.hl7.fhir.dstu3.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.dstu3.model.Patient;
 import org.hl7.fhir.dstu3.model.Quantity;
 import org.hl7.fhir.dstu3.model.StringType;
-import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -56,13 +50,9 @@ public class HapiConversionTest {
 
   static FhirContext fhirContext;
 
-  static StructureDefinition patientDefinition;
+  static SparkRowConverter patientConverter;
 
-  static StructureDefinition resultDefinition;
-
-  static DefinitionToSparkVisitor visitor;
-
-  static StructureDefinitions structureDefinitions;
+  static SparkRowConverter resultConverter;
 
 
   @BeforeClass
@@ -72,39 +62,28 @@ public class HapiConversionTest {
 
     UsCoreStructures.addUsCoreResources(fhirContext);
 
-    patientDefinition = (StructureDefinition) fhirContext.getValidationSupport()
-            .fetchStructureDefinition(fhirContext,
-            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient");
+    patientConverter = SparkRowConverter.forResource(fhirContext,
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient");
 
-    resultDefinition = (StructureDefinition) fhirContext.getValidationSupport()
-        .fetchStructureDefinition(fhirContext,
-            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observationresults");
-
-
-    visitor = new DefinitionToSparkVisitor();
-    structureDefinitions = new StructureDefinitions(visitor, fhirContext);
-
-    // fhirContext.newJsonParser().parseResource()
+    resultConverter = SparkRowConverter.forResource(fhirContext,
+        "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observationresults");
   }
 
   @Test
   public void testResultStruct() {
 
-    HapiToSparkConverter converter  = (HapiToSparkConverter) structureDefinitions.transform(resultDefinition);
-
-    ((StructType) converter.getDataType()).printTreeString();
+    patientConverter.getSchema().printTreeString();
 
     Observation observation = newObservation();
 
     observation.setEffective(new DateTimeType("2017-02-05T02:00:00.000+00:00"));
 
-    Row row = (Row) converter.toSpark(observation);
+    Row row = resultConverter.resourceToRow(observation);
 
     System.out.println(row);
-    // System.out.println(patientStruct.simpleString());
 
-    Dataset<Row> df = spark.createDataFrame(Collections.singletonList(row), (StructType) converter.getDataType());
-
+    Dataset<Row> df = spark.createDataFrame(Collections.singletonList(row),
+        resultConverter.getSchema());
 
     df.select(functions.col("value.quantity.*"),
         functions.explode(functions.col("component")).alias("comps"))
@@ -195,19 +174,14 @@ public class HapiConversionTest {
   @Test
   public void parsePatient() {
 
-    HapiToSparkConverter converter  = (HapiToSparkConverter) structureDefinitions.transform(patientDefinition);
 
     // ((StructType) converter.getDataType()).printTreeString();
 
     Patient patient = newPatient();
 
-    Row row = (Row) converter.toSpark(patient);
+    Row row = patientConverter.resourceToRow(patient);
 
-    RuntimeResourceDefinition resourceDefinition =  fhirContext.getResourceDefinition(converter.getElementType());
-
-    RowToHapiConverter toHapi =  (RowToHapiConverter) converter.toHapiConverter(resourceDefinition);
-
-    Patient decoded = (Patient) toHapi.toHapi(row);
+    Patient decoded = (Patient) patientConverter.rowToResource(row);
 
     String decodedString = fhirContext.newJsonParser().encodeResourceToString(decoded);
 
@@ -218,19 +192,11 @@ public class HapiConversionTest {
   @Test
   public void parseObservation() {
 
-    HapiToSparkConverter converter  = (HapiToSparkConverter) structureDefinitions.transform(resultDefinition);
-
-    // ((StructType) converter.getDataType()).printTreeString();
-
     Observation observation = newObservation();
 
-    Row row = (Row) converter.toSpark(observation);
+    Row row = resultConverter.resourceToRow(observation);
 
-    RuntimeResourceDefinition resourceDefinition =  fhirContext.getResourceDefinition(converter.getElementType());
-
-    RowToHapiConverter toHapi =  (RowToHapiConverter) converter.toHapiConverter(resourceDefinition);
-
-    Observation decoded = (Observation) toHapi.toHapi(row);
+    Observation decoded = (Observation) resultConverter.rowToResource(row);
 
     String decodedString = fhirContext.newJsonParser().encodeResourceToString(decoded);
 
@@ -240,23 +206,18 @@ public class HapiConversionTest {
   @Test
   public void testCreatesStruct() {
 
-    HapiToSparkConverter converter  = (HapiToSparkConverter) structureDefinitions.transform(patientDefinition);
-
-    ((StructType) converter.getDataType()).printTreeString();
-
     Patient patient = newPatient();
 
     String patientString = fhirContext.newJsonParser().encodeResourceToString(patient);
 
     System.out.println(patientString);
 
-    Row row = (Row) converter.toSpark(patient);
-
+    Row row = patientConverter.resourceToRow(patient);
 
     System.out.println(row);
-    // System.out.println(patientStruct.simpleString());
 
-    Dataset<Row> df = spark.createDataFrame(Collections.singletonList(row), (StructType) converter.getDataType());
+    Dataset<Row> df = spark.createDataFrame(Collections.singletonList(row),
+        patientConverter.getSchema());
 
     df.selectExpr("ethnicity.ombCategory.*",
         "ethnicity.text",

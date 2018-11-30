@@ -6,6 +6,7 @@ import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeCompositeDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeElemContainedResourceList;
 import com.cerner.bunsen.definitions.DefinitionVisitor;
+import com.cerner.bunsen.definitions.FhirConversionSupport;
 import com.cerner.bunsen.definitions.StructureField;
 import com.cerner.bunsen.spark.stu3.HapiToSparkConverter.HapiFieldSetter;
 import com.google.common.collect.ImmutableMap;
@@ -14,7 +15,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -24,22 +24,21 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.dstu3.model.Base;
-import org.hl7.fhir.dstu3.model.BooleanType;
-import org.hl7.fhir.dstu3.model.DecimalType;
-import org.hl7.fhir.dstu3.model.Extension;
-import org.hl7.fhir.dstu3.model.IntegerType;
-import org.hl7.fhir.dstu3.model.PrimitiveType;
-import org.hl7.fhir.dstu3.model.DomainResource;
-import org.hl7.fhir.dstu3.model.ElementDefinition;
-import org.hl7.fhir.dstu3.model.Property;
+import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseDatatype;
+import org.hl7.fhir.instance.model.api.IBaseExtension;
 import org.hl7.fhir.instance.model.api.IBaseHasExtensions;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
 import scala.collection.JavaConversions;
 
-public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkConverter> {
+class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkConverter> {
+
+  private final FhirConversionSupport fhirSupport;
+
+  public DefinitionToSparkVisitor(FhirConversionSupport fhirSupport) {
+    this.fhirSupport = fhirSupport;
+  }
 
   private static final DataType decimalType = DataTypes.createDecimalType(12, 4);
 
@@ -49,18 +48,23 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
       private final  RowToHapiConverter valuetoHapiConverter;
 
-      LeafExensionFieldSetter(RowToHapiConverter valuetoHapiConverter) {
+      private final BaseRuntimeElementCompositeDefinition elementDefinition;
+
+      LeafExensionFieldSetter(BaseRuntimeElementCompositeDefinition elementDefinition,
+          RowToHapiConverter valuetoHapiConverter) {
+
+        this.elementDefinition = elementDefinition;
         this.valuetoHapiConverter = valuetoHapiConverter;
       }
 
       @Override
-      public void setField(Base parentObject,
+      public void setField(IBase parentObject,
           BaseRuntimeChildDefinition fieldToSet,
           Object sparkObject) {
 
         IBase hapiObject = valuetoHapiConverter.toHapi(sparkObject);
 
-        Extension extension = new Extension(extensionUrl);
+        IBaseExtension extension = (IBaseExtension) elementDefinition.newInstance(extensionUrl);
 
         extension.setValue((IBaseDatatype) hapiObject);
 
@@ -81,7 +85,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     @Override
     public Object toSpark(Object input) {
 
-      Extension extension = (Extension) input;
+      IBaseExtension extension = (IBaseExtension) input;
 
       return valueConverter.toSpark(extension.getValue());
     }
@@ -101,15 +105,16 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
       // Get the structure definition of the value.
       String fieldName = "value" + valueConverter.getElementType();
 
-      BaseRuntimeElementDefinition valueDefinition =
-          ((RuntimeCompositeDatatypeDefinition) elementDefinitions[0])
-              .getChildByName(fieldName)
+      RuntimeCompositeDatatypeDefinition definition =
+          (RuntimeCompositeDatatypeDefinition) elementDefinitions[0];
+
+      BaseRuntimeElementDefinition valueDefinition = definition.getChildByName(fieldName)
               .getChildByName(fieldName);
 
       RowToHapiConverter sparkToHapi = (RowToHapiConverter)
           valueConverter.toHapiConverter(valueDefinition);
 
-      return new LeafExensionFieldSetter(sparkToHapi);
+      return new LeafExensionFieldSetter(definition,  sparkToHapi);
     }
   }
 
@@ -124,7 +129,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
       }
 
       @Override
-      public void setField(Base parentObject,
+      public void setField(IBase parentObject,
           BaseRuntimeChildDefinition fieldToSet,
           Object sparkObject) {
 
@@ -154,16 +159,20 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     private final StructType structType;
 
+    private final FhirConversionSupport fhirSupport;
+
     ChoiceToSparkConverter(Map<String,HapiToSparkConverter> choiceTypes,
-        StructType structType) {
+        StructType structType,
+        FhirConversionSupport fhirSupport) {
       this.choiceTypes = choiceTypes;
       this.structType = structType;
+      this.fhirSupport = fhirSupport;
     }
 
     @Override
     public Object toSpark(Object input) {
 
-      String fhirType = ((Base) input).fhirType();
+      String fhirType = fhirSupport.fhirType((IBase) input);
 
       Object[] values = new Object[choiceTypes.size()];
 
@@ -221,7 +230,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
   private static class NoOpFieldSetter implements HapiFieldSetter, RowToHapiConverter {
 
     @Override
-    public void setField(Base parentObject, BaseRuntimeChildDefinition fieldToSet,
+    public void setField(IBase parentObject, BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject) {
 
     }
@@ -246,6 +255,8 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     private final String extensionUrl;
 
+    private final FhirConversionSupport fhirSupport;
+
     private class CompositeFieldSetter implements HapiFieldSetter, RowToHapiConverter  {
 
       private final List<StructureField<HapiFieldSetter>> children;
@@ -262,7 +273,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
       @Override
       public IBase toHapi(Object rowObject) {
 
-        Base fhirObject = (Base) compositeDefinition.newInstance();
+        IBase fhirObject = (IBase) compositeDefinition.newInstance();
 
         Row row = (Row) rowObject;
 
@@ -308,14 +319,14 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
         if (extensionUrl != null) {
 
-          ((Extension) fhirObject).setUrl(extensionUrl);
+          ((IBaseExtension) fhirObject).setUrl(extensionUrl);
         }
 
         return fhirObject;
       }
 
       @Override
-      public void setField(Base parentObject,
+      public void setField(IBase parentObject,
           BaseRuntimeChildDefinition fieldToSet,
           Object sparkObject) {
 
@@ -336,36 +347,44 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     CompositeToSparkConverter(String elementType,
         List<StructureField<HapiToSparkConverter>> children,
-        StructType structType) {
-      this(elementType, children, structType, null);
+        StructType structType,
+        FhirConversionSupport fhirSupport) {
+      this(elementType, children, structType, fhirSupport, null);
     }
 
     CompositeToSparkConverter(String elementType,
         List<StructureField<HapiToSparkConverter>> children,
         StructType structType,
+        FhirConversionSupport fhirSupport,
         String extensionUrl) {
+
       this.elementType = elementType;
       this.children = children;
       this.structType = structType;
       this.extensionUrl = extensionUrl;
+      this.fhirSupport = fhirSupport;
     }
 
     @Override
     public Object toSpark(Object input) {
 
-      Base composite = (Base) input;
+      IBase composite = (IBase) input;
 
       Object[] values = new Object[children.size()];
 
-      if (composite instanceof DomainResource) {
+      if (composite instanceof IAnyResource) {
 
-        values[0] = composite.getIdBase();
+        values[0] = ((IAnyResource) composite).getIdElement().getValueAsString();
       }
 
+      Map<String,List> properties = fhirSupport.compositeValues(composite);
+
+      /*
       Map<String,Property> properties = composite.children()
           .stream()
           .collect(Collectors.toMap(Property::getName,
               Function.identity()));
+              */
 
       Iterator<StructureField<HapiToSparkConverter>> schemaIterator = children.iterator();
 
@@ -383,24 +402,25 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
         HapiToSparkConverter converter = schemaEntry.result();
 
-        Property property = properties.get(propertyName);
+        List propertyValues = properties.get(propertyName);
 
-        if (property != null && property.hasValues()) {
+        if (propertyValues != null && !propertyValues.isEmpty()) {
 
           if (converter.getDataType() instanceof ArrayType) {
 
-            values[valueIndex] = schemaEntry.result().toSpark(property.getValues());
+            values[valueIndex] = schemaEntry.result().toSpark(propertyValues);
 
           } else {
 
-            values[valueIndex] = schemaEntry.result().toSpark(property.getValues().get(0));
+            values[valueIndex] = schemaEntry.result().toSpark(propertyValues.get(0));
           }
         } else if (converter.extensionUrl() != null) {
 
           // No corresponding property for the name, so see if it is an extension.
-          List<Extension> extensions = (List<Extension>) ((IBaseHasExtensions) composite).getExtension();
+          List<? extends IBaseExtension> extensions =
+              ((IBaseHasExtensions) composite).getExtension();
 
-          for (Extension extension: extensions) {
+          for (IBaseExtension extension: extensions) {
 
             if (extension.getUrl().equals(converter.extensionUrl())) {
 
@@ -514,7 +534,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
       }
 
       @Override
-      public void setField(Base parentObject,
+      public void setField(IBase parentObject,
           BaseRuntimeChildDefinition fieldToSet,
           Object sparkObject) {
 
@@ -585,7 +605,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     }
 
     @Override
-    public void setField(Base parentObject,
+    public void setField(IBase parentObject,
         BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject) {
 
@@ -595,7 +615,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     @Override
     public IBase toHapi(Object sparkObject) {
 
-      PrimitiveType element = (PrimitiveType) elementDefinition.newInstance();
+      IPrimitiveType element = (IPrimitiveType) elementDefinition.newInstance();
 
       element.setValueAsString(((BigDecimal) sparkObject).toPlainString());
 
@@ -608,7 +628,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     @Override
     public Object toSpark(Object input) {
 
-      return ((DecimalType) input).getValue();
+      return ((IPrimitiveType) input).getValue();
     }
 
     @Override
@@ -635,7 +655,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     }
 
     @Override
-    public void setField(Base parentObject,
+    public void setField(IBase parentObject,
         BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject) {
 
@@ -645,7 +665,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     @Override
     public IBase toHapi(Object sparkObject) {
 
-      PrimitiveType element = (PrimitiveType) elementDefinition.newInstance();
+      IPrimitiveType element = (IPrimitiveType) elementDefinition.newInstance();
 
       element.setValueAsString((String) sparkObject);
 
@@ -662,11 +682,11 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     }
 
     @Override
-    public void setField(Base parentObject,
+    public void setField(IBase parentObject,
         BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject) {
 
-      BooleanType element = (BooleanType) elementDefinition.newInstance();
+      IPrimitiveType<Boolean> element = (IPrimitiveType<Boolean>) elementDefinition.newInstance();
 
       element.setValue((Boolean) sparkObject);
 
@@ -684,11 +704,11 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     }
 
     @Override
-    public void setField(Base parentObject,
+    public void setField(IBase parentObject,
         BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject) {
 
-      IntegerType element = (IntegerType) elementDefinition.newInstance();
+      IPrimitiveType<Integer> element = (IPrimitiveType<Integer>) elementDefinition.newInstance();
 
       element.setValue((Integer) sparkObject);
 
@@ -702,7 +722,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     @Override
     public Object toSpark(Object input) {
-      return ((PrimitiveType) input).getValueAsString();
+      return ((IPrimitiveType) input).getValueAsString();
     }
 
     @Override
@@ -734,14 +754,14 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     }
 
     @Override
-    public void setField(Base parentObject,
+    public void setField(IBase parentObject,
         BaseRuntimeChildDefinition fieldToSet,
         Object sparkObject) {
 
 
       // The enumerated value must be set from the runtime child definition
       // to initialize the Java enum itself.
-      PrimitiveType element = (PrimitiveType) elementDefinition
+      IPrimitiveType element = (IPrimitiveType) elementDefinition
           .newInstance(fieldToSet.getInstanceConstructorArguments());
 
       element.setValueAsString((String) sparkObject);
@@ -752,7 +772,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     @Override
     public IBase toHapi(Object sparkObject) {
 
-      PrimitiveType element = (PrimitiveType) elementDefinition.newInstance();
+      IPrimitiveType element = (IPrimitiveType) elementDefinition.newInstance();
 
       element.setValueAsString((String) sparkObject);
 
@@ -765,7 +785,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     @Override
     public Object toSpark(Object input) {
-      return ((PrimitiveType) input).getValueAsString();
+      return ((IPrimitiveType) input).getValueAsString();
     }
 
     @Override
@@ -801,7 +821,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     @Override
     public Object toSpark(Object input) {
-      String uri =  ((PrimitiveType) input).getValueAsString();
+      String uri =  ((IPrimitiveType) input).getValueAsString();
 
       return uri != null && uri.startsWith(prefix)
           ? uri.substring(uri.lastIndexOf('/') + 1)
@@ -853,7 +873,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     @Override
     public Object toSpark(Object input) {
 
-      return ((BooleanType) input).booleanValue();
+      return ((IPrimitiveType<Boolean>) input).getValue();
     }
 
     @Override
@@ -872,7 +892,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     @Override
     public Object toSpark(Object input) {
-      return ((IntegerType) input).getValue();
+      return ((IPrimitiveType) input).getValue();
     }
 
     @Override
@@ -918,7 +938,6 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
   @Override
   public HapiToSparkConverter visitComposite(String elementName,
       String elementType,
-      ElementDefinition definition,
       List<StructureField<HapiToSparkConverter>> children) {
 
     StructField[] fields = children.stream()
@@ -928,7 +947,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
             Metadata.empty()))
         .toArray(StructField[]::new);
 
-    return new CompositeToSparkConverter(elementType,  children, new StructType(fields));
+    return new CompositeToSparkConverter(elementType,  children, new StructType(fields), fhirSupport);
   }
 
   public HapiToSparkConverter visitReference(String elementName,
@@ -960,7 +979,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
 
     return new CompositeToSparkConverter(null,
         fieldsWithReferences,
-        new StructType(fields));
+        new StructType(fields), fhirSupport);
   }
 
   @Override
@@ -984,6 +1003,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
     return new CompositeToSparkConverter(null,
         children,
         new StructType(fields),
+        fhirSupport,
         extensionUrl);
   }
 
@@ -1022,6 +1042,7 @@ public class DefinitionToSparkVisitor implements DefinitionVisitor<HapiToSparkCo
         .toArray(StructField[]::new);
 
     return new ChoiceToSparkConverter(choiceTypes,
-        new StructType(fields));
+        new StructType(fields),
+        fhirSupport);
   }
 }
