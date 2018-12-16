@@ -42,7 +42,7 @@
               <skip>${skip.python.tests}</skip>
               <environmentVariables>
                 <PYTHONPATH>${project.basedir}</PYTHONPATH>
-                <SHADED_JAR_PATH>${project.parent.basedir}/bunsen-shaded/target/bunsen-shaded-${project.version}.jar</SHADED_JAR_PATH>
+                <SHADED_JAR_PATH>${project.parent.basedir}/bunsen-spark-shaded/target/bunsen-spark-shaded-${project.version}.jar</SHADED_JAR_PATH>
               </environmentVariables>
             </configuration>
             <id>python-tests</id>

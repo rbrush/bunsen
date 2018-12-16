@@ -31,6 +31,12 @@
 
     <dependency>
       <groupId>com.cerner.bunsen</groupId>
+      <artifactId>bunsen-core-stu3</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.cerner.bunsen</groupId>
       <artifactId>bunsen-uscore-resources-stu3</artifactId>
       <scope>test</scope>
     </dependency>

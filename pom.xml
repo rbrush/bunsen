@@ -41,9 +41,7 @@
     <module>bunsen-uscore-resources-stu3</module>
     <module>bunsen-spark</module>
     <module>bunsen-spark-stu3</module>
-    <module>bunsen-stu3</module>
-  <!--  <module>bunsen-r4</module> -->
-    <module>bunsen-shaded</module>
+    <module>bunsen-spark-shaded</module>
     <module>python</module>
     <module>assembly</module>
   </modules>

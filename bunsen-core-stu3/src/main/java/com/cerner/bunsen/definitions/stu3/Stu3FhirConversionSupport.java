@@ -5,10 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.hl7.fhir.dstu3.model.Base;
+import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.dstu3.model.Property;
 import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.instance.model.api.IBaseBundle;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 
-public class Stu3FhirConversionSupport implements FhirConversionSupport {
+public class Stu3FhirConversionSupport extends FhirConversionSupport {
 
   public String fhirType(IBase base) {
 
@@ -24,10 +28,31 @@ public class Stu3FhirConversionSupport implements FhirConversionSupport {
       return null;
     } else {
 
+      // Some FHIR resources produce duplicate properties in the children,
+      // so just use the first when converting to a map.
       return children.stream()
           .filter(property -> property.hasValues())
-          .collect(Collectors.toMap(Property::getName,
-              property -> property.getValues()));
+          .collect(
+              Collectors.toMap(Property::getName,
+                  property -> property.getValues(),
+                  (first, second) -> first));
     }
   }
+
+  @Override
+  public List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle, String resourceName) {
+
+    Bundle stu3Bundle = (Bundle) bundle;
+
+    List<IBaseResource> items = stu3Bundle.getEntry().stream()
+            .map(BundleEntryComponent::getResource)
+            .filter(resource ->
+                resource != null
+                    && resourceName.equalsIgnoreCase(resource.getResourceType().name()))
+            .collect(Collectors.toList());
+
+    return items;
+  }
+
+
 }

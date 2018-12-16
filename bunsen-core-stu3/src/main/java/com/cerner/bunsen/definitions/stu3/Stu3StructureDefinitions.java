@@ -36,6 +36,22 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   private List<ElementDefinition> getChildren(ElementDefinition parent,
       List<ElementDefinition> definitions) {
 
+    if (parent.getContentReference() != null) {
+
+      if (!parent.getContentReference().startsWith("#")) {
+        throw new IllegalStateException("Non-local references are not yet supported");
+      }
+
+      // Remove the leading hash (#) to get the referenced type.
+      String referencedType = parent.getContentReference().substring(1);
+
+      // Find the actual type to use.
+      parent = definitions.stream()
+          .filter(definition -> definition.getPath().equals(referencedType))
+          .findFirst()
+          .get();
+    }
+
     String startsWith = parent.getId() + ".";
 
     // Get nodes
@@ -79,15 +95,17 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   private <T> List<StructureField<T>> extensionElementToFields(DefinitionVisitor<T> visitor,
       ElementDefinition element,
       List<ElementDefinition> definitions,
-      Deque<StructureDefinition> stack) {
+      Deque<String> stack) {
 
     // FIXME: extension is a type rather than an external structure....
-    StructureDefinition definition = (StructureDefinition) validationSupport.fetchStructureDefinition(
-        context, element.getTypeFirstRep().getProfile());
+    StructureDefinition definition = element.getTypeFirstRep().getProfile() != null
+        ? (StructureDefinition) validationSupport
+        .fetchStructureDefinition(context, element.getTypeFirstRep().getProfile())
+        : null;
 
     if (definition != null) {
 
-      if (shouldTerminateRecursive(definition, stack)) {
+      if (shouldTerminateRecursive(definition.getUrl(), stack)) {
 
         return Collections.emptyList();
 
@@ -122,7 +140,7 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
 
   private <T> List<StructureField<T>> visitExtensionDefinition(DefinitionVisitor<T> visitor,
       String sliceName,
-      Deque<StructureDefinition> stack,
+      Deque<String> stack,
       String url,
       List<ElementDefinition> extensionDefinitions,
       ElementDefinition extensionRoot) {
@@ -218,13 +236,17 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   private <T> List<StructureField<T>> elementToFields(DefinitionVisitor<T> visitor,
       ElementDefinition element,
       List<ElementDefinition> definitions,
-      Deque<StructureDefinition> stack) {
+      Deque<String> stack) {
 
     String elementName = elementName(element);
 
-    // Fields with max of zero are omitted.
-    if (element.getMax().equals("0")) {
+    if (shouldTerminateRecursive(element.getPath(), stack)) {
 
+      return Collections.emptyList();
+
+    } else if (element.getMax().equals("0")) {
+
+      // Fields with max of zero are omitted.
       return Collections.emptyList();
 
     } else if("Extension".equals(element.getTypeFirstRep().getCode())) {
@@ -279,7 +301,7 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
         // Handle defined data types.
         StructureDefinition definition = getDefinition(element);
 
-        if (shouldTerminateRecursive(definition, stack)) {
+        if (shouldTerminateRecursive(definition.getUrl(), stack)) {
 
           return Collections.emptyList();
 
@@ -316,7 +338,7 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
       // Handle defined data types.
       StructureDefinition definition = getDefinition(element);
 
-      if (shouldTerminateRecursive(definition, stack)) {
+      if (shouldTerminateRecursive(definition.getUrl(), stack)) {
 
         return Collections.emptyList();
 
@@ -344,33 +366,46 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   private <T> List<StructureField<T>> transformChildren(DefinitionVisitor<T> visitor,
       ElementDefinition element,
       List<ElementDefinition> definitions,
-      Deque<StructureDefinition> stack) {
+      Deque<String> stack) {
 
-    // Handle composite type
-    List<StructureField<T>> childElements = new ArrayList<>();
+    if (shouldTerminateRecursive(element.getPath(), stack)) {
 
-    for (ElementDefinition child: getChildren(element, definitions)) {
+      return Collections.emptyList();
 
-      List<StructureField<T>>childFields = elementToFields(visitor,  child, definitions, stack);
+    } else {
+      stack.push(element.getPath());
 
-      childElements.addAll(childFields);
+      // Handle composite type
+      List<StructureField<T>> childElements = new ArrayList<>();
+
+      for (ElementDefinition child: getChildren(element, definitions)) {
+
+        List<StructureField<T>>childFields = elementToFields(visitor,  child, definitions, stack);
+
+        childElements.addAll(childFields);
+      }
+
+      stack.pop();
+
+      return childElements;
     }
-
-    return childElements;
   }
 
-  private boolean shouldTerminateRecursive(StructureDefinition definition,
-      Deque<StructureDefinition> stack) {
+  private boolean shouldTerminateRecursive(String newUrl,
+      Deque<String> stack) {
 
     // TODO: make recursive depth configurable?
-    return stack.stream().filter(def -> def.getUrl().equals(definition.getUrl())).count() > 0;
+    return stack.stream().filter(url -> url.equals(newUrl)).count() > 0;
   }
 
   @Override
-  public <T> T transform(DefinitionVisitor<T> visitor,  String resourceTypeUrl) {
+  public <T> T transform(DefinitionVisitor<T> visitor, String resourceTypeUrl) {
 
     StructureDefinition definition = (StructureDefinition) context.getValidationSupport()
         .fetchStructureDefinition(context, resourceTypeUrl);
+
+    if (definition == null)
+      throw new IllegalArgumentException("Unable to find definition for " + resourceTypeUrl);
 
     return transform(visitor, definition);
   }
@@ -412,13 +447,13 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   private <T> T transform(DefinitionVisitor<T> visitor,
       ElementDefinition element,
       StructureDefinition definition,
-      Deque<StructureDefinition> stack) {
+      Deque<String> stack) {
 
     List<ElementDefinition> definitions = definition.getSnapshot().getElement();
 
     ElementDefinition root = definitions.get(0);
 
-    stack.push(definition);
+    stack.push(definition.getUrl());
 
     List<StructureField<T>> childElements = transformChildren(visitor, root, definitions, stack);
 

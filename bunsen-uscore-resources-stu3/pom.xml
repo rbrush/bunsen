@@ -14,9 +14,11 @@
 
   <dependencies>
 
-    <!-- Testing -->
+    <dependency>
+      <groupId>com.cerner.bunsen</groupId>
+      <artifactId>bunsen-core</artifactId>
+    </dependency>
 
-    <!-- HAPI FHIR DSTU3 resources included only for unit tests. -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-validation-resources-dstu3</artifactId>
