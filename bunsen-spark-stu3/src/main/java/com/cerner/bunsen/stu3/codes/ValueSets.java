@@ -3,22 +3,27 @@ package com.cerner.bunsen.stu3.codes;
 import static org.apache.spark.sql.functions.lit;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
+
 import com.cerner.bunsen.FhirContexts;
-import com.cerner.bunsen.spark.HasSerializableConverter;
 import com.cerner.bunsen.spark.SparkRowConverter;
 import com.cerner.bunsen.spark.codes.UrlAndVersion;
 import com.cerner.bunsen.spark.codes.Value;
 import com.cerner.bunsen.spark.codes.base.AbstractValueSets;
+import com.cerner.bunsen.spark.converters.HasSerializableConverter;
+
 import java.sql.Timestamp;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+
 import org.hl7.fhir.dstu3.model.ValueSet;
 import org.hl7.fhir.dstu3.model.ValueSet.ConceptReferenceComponent;
 import org.hl7.fhir.dstu3.model.ValueSet.ConceptSetComponent;
@@ -123,7 +128,7 @@ public class ValueSets extends AbstractValueSets<ValueSet, ValueSets> {
     }
   }
 
-   static class ExtractValues extends HasSerializableConverter
+  static class ExtractValues extends HasSerializableConverter
       implements FlatMapFunction<Row,Value> {
 
     ExtractValues(FhirVersionEnum fhirVersion) {
@@ -167,9 +172,9 @@ public class ValueSets extends AbstractValueSets<ValueSet, ValueSets> {
     Dataset<Row> withoutConcepts = spark.createDataFrame(withoutConceptsRdd,
         valueSetRowConverter.getSchema());
 
-    JavaRDD<Value> newValuesRDD = valueSetsRdd.flatMap(new ExtractValues(fhirVersion));
+    JavaRDD<Value> newValuesRdd = valueSetsRdd.flatMap(new ExtractValues(fhirVersion));
 
-    Dataset<Value> newValues = spark.createDataset(newValuesRDD.rdd(), getValueEncoder());
+    Dataset<Value> newValues = spark.createDataset(newValuesRdd.rdd(), getValueEncoder());
 
     return withValueSets(withoutConcepts, newValues);
   }

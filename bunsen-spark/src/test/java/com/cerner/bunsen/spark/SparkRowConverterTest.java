@@ -94,6 +94,9 @@ public class SparkRowConverterTest {
 
   private static Condition testConditionDecoded;
 
+  /**
+   * Loads resource definitions used for testing.
+   */
   @BeforeClass
   public static void loadDefinition() throws IOException {
 
@@ -247,14 +250,14 @@ public class SparkRowConverterTest {
     ethnicity.setUrl(US_CORE_ETHNICITY);
     ethnicity.setValue(null);
 
-    // Add category to ethnicity extension
-    Extension ombCategory = ethnicity.addExtension();
-
     Coding ombCoding = new Coding();
 
     ombCoding.setSystem("urn:oid:2.16.840.1.113883.6.238");
     ombCoding.setCode("2186-5");
     ombCoding.setDisplay("Not Hispanic or Latino");
+
+    // Add category to ethnicity extension
+    Extension ombCategory = ethnicity.addExtension();
 
     ombCategory.setUrl("ombCategory");
     ombCategory.setValue(ombCoding);

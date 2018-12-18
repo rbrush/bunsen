@@ -110,6 +110,9 @@ public abstract class AbstractConceptMaps<T extends IBaseResource,
 
   /**
    * Returns a simple dataset of URL and versions of concept maps.
+   *
+   * @param conceptMaps a datafrae of concept maps to scan.
+   * @return a dataframe of URL and version details for the maps.
    */
   protected Dataset<UrlAndVersion> getUrlAndVersions(Dataset<Row> conceptMaps) {
 
@@ -294,8 +297,15 @@ public abstract class AbstractConceptMaps<T extends IBaseResource,
         this.mappings.union(newMappings));
   }
 
+
   /**
    * Returns a new instance of this ConceptMaps type with the given parameters.
+   *
+   * @param spark the spark session
+   * @param members Concept map URL and version details
+   * @param conceptMaps the concept maps to include
+   * @param mappings the mappings themselves
+   * @return a new ConceptMaps instance.
    */
   protected abstract C newInstance(SparkSession spark,
       Dataset<UrlAndVersion> members,
@@ -484,6 +494,9 @@ public abstract class AbstractConceptMaps<T extends IBaseResource,
   /**
    * Returns true if the UrlAndVersions of new value sets contains duplicates with the current
    * ValueSets.
+   *
+   * @param membersToCheck url and versions to check for duplciates
+   * @return  true if there are duplicates, false otherwise.
    */
   protected boolean hasDuplicateUrlAndVersions(Dataset<UrlAndVersion> membersToCheck) {
 

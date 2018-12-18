@@ -7,7 +7,10 @@ import com.google.common.collect.ImmutableSet;
 import java.lang.reflect.Constructor;
 import java.util.Set;
 
-public abstract class StructureDefinitions<SDT> {
+/**
+ * Abstract base class to visit FHIR structure definitions.
+ */
+public abstract class StructureDefinitions {
 
   protected static final Set<String> PRIMITIVE_TYPES =  ImmutableSet.<String>builder()
       .add("id")
@@ -33,21 +36,45 @@ public abstract class StructureDefinitions<SDT> {
       "com.cerner.bunsen.definitions.stu3.Stu3StructureDefinitions";
 
   protected final FhirContext context;
+
   protected final IContextValidationSupport validationSupport;
 
+  /**
+   * Creates a new instance with the given context.
+   *
+   * @param context the FHIR context.
+   */
   public StructureDefinitions(FhirContext context) {
 
     this.context = context;
     this.validationSupport = context.getValidationSupport();
   }
 
-
-
+  /**
+   * Transforms a FHIR resource to a type defined by the visitor.
+   *
+   * @param visitor a visitor class to recursively transform the structure.
+   * @param resourceTypeUrl the URL defining the resource type or profile.
+   * @param <T> the return type of the visitor.
+   * @return the transformed result.
+   */
   public abstract <T> T transform(DefinitionVisitor<T> visitor,
       String resourceTypeUrl);
 
+  /**
+   * Returns supporting functions to make FHIR conversion work independent of version.
+   *
+   * @return functions supporting FHIR conversion.
+   */
   public abstract FhirConversionSupport conversionSupport();
 
+
+  /**
+   * Create a new instance of this class for the given version of FHIR.
+   *
+   * @param context The FHIR context
+   * @return a StructureDefinitions instance.
+   */
   public static StructureDefinitions create(FhirContext context) {
 
     Class structureDefinitionsClass;
@@ -58,9 +85,9 @@ public abstract class StructureDefinitions<SDT> {
         structureDefinitionsClass = Class.forName(STU3_DEFINITIONS_CLASS);
 
 
-      } catch (ClassNotFoundException e) {
+      } catch (ClassNotFoundException exception) {
 
-        throw new IllegalStateException(e);
+        throw new IllegalStateException(exception);
 
       }
 
@@ -69,8 +96,8 @@ public abstract class StructureDefinitions<SDT> {
 
         return (StructureDefinitions) constructor.newInstance(context);
 
-      } catch (Exception e) {
-        throw new IllegalStateException(e);
+      } catch (Exception exception) {
+        throw new IllegalStateException(exception);
       }
 
     } else {
@@ -78,5 +105,4 @@ public abstract class StructureDefinitions<SDT> {
         + context.getVersion().getVersion());
     }
   }
-
 }

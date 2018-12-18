@@ -1,9 +1,8 @@
-package com.cerner.bunsen.spark;
+package com.cerner.bunsen.spark.converters;
 
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import com.cerner.bunsen.FhirContexts;
-import com.cerner.bunsen.definitions.FhirConversionSupport;
+import com.cerner.bunsen.spark.SparkRowConverter;
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -13,7 +12,7 @@ import java.io.Serializable;
  * this and implement the appropriate functional interface for the
  * needed operation.
  */
-abstract public class HasSerializableConverter implements Serializable {
+public abstract class HasSerializableConverter implements Serializable {
 
   private String resourceTypeUrl;
 
@@ -31,12 +30,6 @@ abstract public class HasSerializableConverter implements Serializable {
         resourceTypeUrl);
   }
 
-  private void writeObject(java.io.ObjectOutputStream stream) throws IOException {
-
-    stream.defaultWriteObject();
-
-  }
-
   private void readObject(java.io.ObjectInputStream stream) throws IOException,
       ClassNotFoundException {
 
@@ -45,6 +38,5 @@ abstract public class HasSerializableConverter implements Serializable {
     this.converter = SparkRowConverter.forResource(FhirContexts.contextFor(fhirVersion),
         resourceTypeUrl);
   }
-
 
 }

@@ -263,11 +263,17 @@ public abstract class AbstractValueSets<T extends IBaseResource,C extends Abstra
 
   /**
    * Adds the given values to the given value set instance.
+   *
+   * @param valueSet the value set to add.
+   * @param values the values to add.
    */
   protected abstract void addToValueSet(T valueSet, Dataset<Value> values);
 
   /**
    * Returns a dataset of distinct URL and version tuples.
+   *
+   * @param valueSets valueSets to scan for the URL and version.
+   * @return the distinct URL and versions for the value sets.
    */
   protected Dataset<UrlAndVersion> getUrlAndVersions(Dataset<Row> valueSets) {
 
@@ -279,6 +285,9 @@ public abstract class AbstractValueSets<T extends IBaseResource,C extends Abstra
   /**
    * Returns true if the UrlAndVersions if the membersToCheck has any duplicates with the members
    * of this value sets instance.
+   *
+   * @param membersToCheck the members to check for duplicates
+   * @return true if there are duplicate URL and versions, false otherwise.
    */
   protected boolean hasDuplicateUrlAndVersions(Dataset<UrlAndVersion> membersToCheck) {
 
@@ -436,6 +445,9 @@ public abstract class AbstractValueSets<T extends IBaseResource,C extends Abstra
 
   /**
    * Returns a dataset of ValueSet from the content stored at the given directory.
+   *
+   * @param path the path containting the value sets
+   * @return a dataframe of loaded value sets in row form.
    */
   protected Dataset<Row> valueSetDatasetFromDirectory(String path) {
 

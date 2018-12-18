@@ -12,13 +12,18 @@ import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
+/**
+ * Conversion support for translating STU3 FHIR resources.
+ */
 public class Stu3FhirConversionSupport extends FhirConversionSupport {
 
+  @Override
   public String fhirType(IBase base) {
 
     return ((Base) base).fhirType();
   }
 
+  @Override
   public Map<String, List> compositeValues(IBase composite) {
 
     List<Property> children = ((Base) composite).children();
@@ -53,6 +58,4 @@ public class Stu3FhirConversionSupport extends FhirConversionSupport {
 
     return items;
   }
-
-
 }

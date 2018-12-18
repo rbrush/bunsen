@@ -20,8 +20,10 @@ import org.hl7.fhir.dstu3.model.ElementDefinition;
 import org.hl7.fhir.dstu3.model.ElementDefinition.TypeRefComponent;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 
-
-public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefinition> {
+/**
+ * {@link StructureDefinitions} implementation for FHIR STU3.
+ */
+public class Stu3StructureDefinitions extends StructureDefinitions {
 
   private static final FhirConversionSupport CONVERSION_SUPPORT = new Stu3FhirConversionSupport();
 
@@ -133,8 +135,6 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
           element.getTypeFirstRep().getProfile(),
           definitions,
           element);
-
-      // return visitor.visitParentExtension(parent, element.getSliceName(), element, childElements);
     }
   }
 
@@ -150,22 +150,20 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
     // Extensions may contain either additional extensions or a value field, but not both.
 
     List<ElementDefinition> childExtensions = children.stream()
-        .filter( e -> e.getSliceName() != null)
+        .filter(element -> element.getSliceName() != null)
         .collect(Collectors.toList());
 
     if (!childExtensions.isEmpty()) {
 
       List<StructureField<T>> childFields = new ArrayList<>();
 
-      for(ElementDefinition childExtension: childExtensions) {
+      for (ElementDefinition childExtension: childExtensions) {
+
         List<StructureField<T>> childField = extensionElementToFields(visitor,
             childExtension, extensionDefinitions, stack);
 
         childFields.addAll(childField);
       }
-
-      // The extension has child extensions, so recursively evaluate them.
-      // Map<String,T> childElements = transformChildren(parent, extensionRoot, childExtensions, stack);
 
       T result = visitor.visitParentExtension(sliceName,
           url,
@@ -196,7 +194,8 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
       String extensionUrl = urlElement.get().getFixed().primitiveValue();
 
 
-      List<StructureField<T>> childField = elementToFields(visitor, valueElement.get(), extensionDefinitions, stack);
+      List<StructureField<T>> childField = elementToFields(visitor, valueElement.get(),
+          extensionDefinitions, stack);
 
       T result = visitor.visitLeafExtension(sliceName,
           extensionUrl,
@@ -228,10 +227,6 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
    * Returns the fields for the given element. The returned stream can be empty
    * (e.g., for elements with max of zero), or have multiple values (for elements
    * that generate fields with additional data in siblings.)
-   *
-   * @param element
-   * @param definitions
-   * @return
    */
   private <T> List<StructureField<T>> elementToFields(DefinitionVisitor<T> visitor,
       ElementDefinition element,
@@ -249,7 +244,7 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
       // Fields with max of zero are omitted.
       return Collections.emptyList();
 
-    } else if("Extension".equals(element.getTypeFirstRep().getCode())) {
+    } else if ("Extension".equals(element.getTypeFirstRep().getCode())) {
 
       return extensionElementToFields(visitor, element, definitions, stack);
 
@@ -276,8 +271,8 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
         } else {
 
           StructureDefinition structureDefinition =
-              (StructureDefinition) validationSupport.
-                  fetchStructureDefinition(context, typeRef.getCode());
+              (StructureDefinition) validationSupport
+                  .fetchStructureDefinition(context, typeRef.getCode());
 
           T child = transform(visitor, element, structureDefinition, new ArrayDeque<>());
 
@@ -318,7 +313,8 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
         List<StructureField<T>> childElements = transformChildren(visitor,
             element, definitions, stack);
 
-        List<StructureField<T>> composite = visitComposite(visitor, elementName, null, childElements);
+        List<StructureField<T>> composite = visitComposite(visitor, elementName,
+            null, childElements);
 
         // Array types should produce only a single element.
         if (composite.size() != 1) {
@@ -380,7 +376,7 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
 
       for (ElementDefinition child: getChildren(element, definitions)) {
 
-        List<StructureField<T>>childFields = elementToFields(visitor,  child, definitions, stack);
+        List<StructureField<T>> childFields = elementToFields(visitor,  child, definitions, stack);
 
         childElements.addAll(childFields);
       }
@@ -399,21 +395,23 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   }
 
   @Override
+  public FhirConversionSupport conversionSupport() {
+
+    return CONVERSION_SUPPORT;
+  }
+
+  @Override
   public <T> T transform(DefinitionVisitor<T> visitor, String resourceTypeUrl) {
 
     StructureDefinition definition = (StructureDefinition) context.getValidationSupport()
         .fetchStructureDefinition(context, resourceTypeUrl);
 
-    if (definition == null)
+    if (definition == null) {
+
       throw new IllegalArgumentException("Unable to find definition for " + resourceTypeUrl);
+    }
 
     return transform(visitor, definition);
-  }
-
-  @Override
-  public FhirConversionSupport conversionSupport() {
-
-    return CONVERSION_SUPPORT;
   }
 
   /**
@@ -424,19 +422,6 @@ public class Stu3StructureDefinitions extends StructureDefinitions<StructureDefi
   public <T> T transform(DefinitionVisitor<T> visitor,  StructureDefinition definition) {
 
     return transform(visitor, null, definition, new ArrayDeque<>());
-  }
-
-  /**
-   * Returns an ordered map of transformations for each field in the definition.
-   */
-  public <T> List<StructureField<T>> transformChildren(DefinitionVisitor<T> visitor,
-      StructureDefinition definition) {
-
-    List<ElementDefinition> definitions = definition.getSnapshot().getElement();
-
-    ElementDefinition root = definitions.get(0);
-    
-    return transformChildren(visitor, root, definitions, new ArrayDeque<>());
   }
 
   /**

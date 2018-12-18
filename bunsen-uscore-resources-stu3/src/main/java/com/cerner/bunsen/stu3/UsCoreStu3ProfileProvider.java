@@ -29,9 +29,9 @@ public class UsCoreStu3ProfileProvider implements ProfileProvider {
 
       support.addStructureDefinition(definition);
 
-    } catch (IOException e) {
+    } catch (IOException exception) {
 
-      throw new RuntimeException(e);
+      throw new RuntimeException(exception);
     }
   }
 
@@ -76,7 +76,8 @@ public class UsCoreStu3ProfileProvider implements ProfileProvider {
 
     PrePopulatedValidationSupport support = new PrePopulatedValidationSupport();
 
-    List<StructureDefinition> defaultDefinitions = defaultSupport.fetchAllStructureDefinitions(context);
+    List<StructureDefinition> defaultDefinitions =
+        defaultSupport.fetchAllStructureDefinitions(context);
 
     for (StructureDefinition definition:  defaultDefinitions) {
 

@@ -12,15 +12,6 @@
   <name>Bunsen Spark</name>
   <description>Encoder library for working with FHIR in Spark</description>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-
   <dependencies>
 
     <dependency>

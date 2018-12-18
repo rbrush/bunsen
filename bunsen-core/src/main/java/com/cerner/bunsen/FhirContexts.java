@@ -11,7 +11,9 @@ import java.util.Map;
 import java.util.ServiceLoader;
 
 /**
- *
+ * Loader for FHIR contexts. Unlike the provided {@link FhirContext} loader,
+ * this implementation caches the contexts for reuse, and also loads profiles
+ * that implement the {@link ProfileProvider} SPI.
  */
 public class FhirContexts {
 

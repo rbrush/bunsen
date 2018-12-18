@@ -24,12 +24,33 @@ public abstract class FhirConversionSupport implements Serializable {
       "com.cerner.bunsen.definitions.stu3.Stu3FhirConversionSupport";
 
 
+  /**
+   * Returns the type of a given FHIR object, such as "Condition" or "Observation".
+   *
+   * @param base a FHIR object
+   * @return the FHIR type
+   */
   public abstract String fhirType(IBase base);
 
+  /**
+   * Returns a map of the fields in a composite type to the corresponding values. Since
+   * FHIR fields may have multiple values a list is returned, and single-valued items
+   * will have a singleton list.
+   *
+   * @param composite a FHIR composite type
+   * @return a map of field names to the values.
+   */
   public abstract Map<String, List> compositeValues(IBase composite);
 
+  /**
+   * Extracts resources of the given type from a FHIR bundle
+   *
+   * @param bundle the bundle
+   * @param resourceType the resource type name, such as "Condition" or "Observation"
+   * @return the resources of the specified type.
+   */
   public abstract java.util.List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
-      String resourceName);
+      String resourceType);
 
   /**
    * Cache of FHIR contexts.
@@ -46,9 +67,9 @@ public abstract class FhirConversionSupport implements Serializable {
       try {
         fhirSupportClass = Class.forName(STU3_SUPPORT_CLASS);
 
-      } catch (ClassNotFoundException e) {
+      } catch (ClassNotFoundException exception) {
 
-        throw new IllegalStateException(e);
+        throw new IllegalStateException(exception);
 
       }
 
@@ -60,9 +81,9 @@ public abstract class FhirConversionSupport implements Serializable {
 
       return (FhirConversionSupport) fhirSupportClass.newInstance();
 
-    } catch (Exception e) {
+    } catch (Exception exception) {
 
-      throw new IllegalStateException("Unable to create FHIR support class", e);
+      throw new IllegalStateException("Unable to create FHIR support class", exception);
     }
   }
 
@@ -90,9 +111,13 @@ public abstract class FhirConversionSupport implements Serializable {
     }
   }
 
+  /**
+   * Convenience function to load support for FHIR STU3.
+   *
+   * @return the conversion support instance.
+   */
   public static FhirConversionSupport forStu3() {
 
     return supportFor(FhirVersionEnum.DSTU3);
   }
-
 }

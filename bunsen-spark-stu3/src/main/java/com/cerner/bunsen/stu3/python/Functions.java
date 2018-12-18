@@ -68,6 +68,7 @@ public class Functions {
    * with caution for large datasets, since the returned string will include all data.
    *
    * @param dataset a dataset of FHIR resources.
+   * @param resourceTypeUrl the URL of the FHIR resource type contained in the dataset.
    * @return A string containing the JSON representation of the bundle.
    */
   public static String toJsonBundle(Dataset<Row> dataset, String resourceTypeUrl) {

@@ -10,35 +10,9 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
   <name>Bunsen Core</name>
-  <description>Encoder library for working with FHIR in Spark</description>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
+  <description>Library for traversing FHIR definitions to support translation into other data models.</description>
 
   <dependencies>
-
-    <!-- Spark -->
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${scala.binary.version}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${scala.binary.version}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-hive_${scala.binary.version}</artifactId>
-      <scope>provided</scope>
-    </dependency>
 
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
